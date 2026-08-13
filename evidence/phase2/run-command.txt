@@ -1,0 +1,4 @@
+python -m vendor_contract_compliance.cli \
+  --contract samples/synthetic_vendor_contract.pdf \
+  --policies policies/demo_policies.yaml \
+  --output-dir evidence/phase2

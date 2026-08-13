@@ -1,0 +1,81 @@
+{
+  "document_name": "synthetic_vendor_contract.pdf",
+  "run_at": "2026-08-13T08:57:45.239160Z",
+  "policy_versions": {
+    "POL-001": "1.0",
+    "POL-002": "1.0",
+    "POL-003": "1.0",
+    "POL-004": "1.0",
+    "POL-005": "1.0"
+  },
+  "summary": {
+    "total": 5,
+    "PASS": 1,
+    "GAP": 2,
+    "MISSING": 1,
+    "REVIEW": 1
+  },
+  "findings": [
+    {
+      "finding_id": "F-POL-001",
+      "policy_id": "POL-001",
+      "policy_title": "Confidentiality clause required",
+      "status": "PASS",
+      "severity": "LOW",
+      "contract_clause": "Confidentiality",
+      "evidence_text": "The Supplier shall keep all Customer confidential information confidential and use it only to provide\nthe demonstration services.\nSynthetic fixture · Page 1",
+      "page_number": 1,
+      "reason": "The required confidentiality heading and obligation were found.",
+      "recommended_action": "No action required for this deterministic check."
+    },
+    {
+      "finding_id": "F-POL-002",
+      "policy_id": "POL-002",
+      "policy_title": "Minimum insurance coverage",
+      "status": "GAP",
+      "severity": "HIGH",
+      "contract_clause": "Insurance",
+      "evidence_text": "The Supplier shall maintain commercial insurance coverage of 1,000,000 SAR.\nSynthetic fixture · Page 2",
+      "page_number": 2,
+      "reason": "Extracted coverage is 1,000,000 SAR; policy minimum is 5,000,000 SAR.",
+      "recommended_action": "Increase coverage to at least 5,000,000 SAR."
+    },
+    {
+      "finding_id": "F-POL-003",
+      "policy_id": "POL-003",
+      "policy_title": "Customer audit right required",
+      "status": "MISSING",
+      "severity": "HIGH",
+      "contract_clause": null,
+      "evidence_text": "Required clause not found after scanning every extracted contract page and declared clause heading.",
+      "page_number": null,
+      "reason": "The required customer audit-right heading was absent from all pages.",
+      "recommended_action": "Add an explicit customer right-to-audit clause for human review."
+    },
+    {
+      "finding_id": "F-POL-004",
+      "policy_id": "POL-004",
+      "policy_title": "Minimum termination notice",
+      "status": "GAP",
+      "severity": "MEDIUM",
+      "contract_clause": "Termination Notice",
+      "evidence_text": "Either party may terminate the demonstration arrangement by providing 15 days written notice.\nSynthetic fixture · Page 3",
+      "page_number": 3,
+      "reason": "Extracted notice is 15 days; policy minimum is 30 days.",
+      "recommended_action": "Revise notice to at least 30 days."
+    },
+    {
+      "finding_id": "F-POL-005",
+      "policy_id": "POL-005",
+      "policy_title": "Data protection details required",
+      "status": "REVIEW",
+      "severity": "MEDIUM",
+      "contract_clause": "Data Protection",
+      "evidence_text": "The Supplier shall use reasonable safeguards to protect Customer data. No additional operational\ndetails are stated in this clause.\nSynthetic fixture · Page 4",
+      "page_number": 4,
+      "reason": "A general obligation exists, but deterministic checks did not find: incident notification, data retention. Human review is required; no final legal judgment is made.",
+      "recommended_action": "Have an authorized human review and add incident-notification and data-retention details."
+    }
+  ],
+  "disclaimer": "SYNTHETIC DEMONSTRATION ONLY — NOT LEGAL ADVICE. This deterministic report does not approve or reject a contract; an authorized human must make all decisions."
+}

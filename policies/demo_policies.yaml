@@ -1,0 +1,40 @@
+- policy_id: POL-001
+  title: Confidentiality clause required
+  description: A supplier must protect customer confidential information.
+  rule_type: clause_required
+  required: true
+  severity: HIGH
+  parameters: {heading: Confidentiality}
+  version: "1.0"
+- policy_id: POL-002
+  title: Minimum insurance coverage
+  description: Supplier insurance coverage must be at least 5,000,000 SAR.
+  rule_type: minimum_currency
+  required: true
+  severity: HIGH
+  parameters: {heading: Insurance, minimum_amount: 5000000, currency: SAR}
+  version: "1.0"
+- policy_id: POL-003
+  title: Customer audit right required
+  description: The contract must grant the customer a right to audit.
+  rule_type: clause_required
+  required: true
+  severity: HIGH
+  parameters: {heading: Audit Right}
+  version: "1.0"
+- policy_id: POL-004
+  title: Minimum termination notice
+  description: Termination notice must be at least 30 days.
+  rule_type: minimum_days
+  required: true
+  severity: MEDIUM
+  parameters: {heading: Termination Notice, minimum_days: 30}
+  version: "1.0"
+- policy_id: POL-005
+  title: Data protection details required
+  description: Data protection must specify incident notification and retention details; otherwise human review is required.
+  rule_type: detail_review
+  required: true
+  severity: MEDIUM
+  parameters: {heading: Data Protection, required_details: [incident notification, data retention]}
+  version: "1.0"

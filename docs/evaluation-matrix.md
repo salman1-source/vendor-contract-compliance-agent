@@ -17,3 +17,7 @@
 ## قاعدة الاكتمال
 
 **لا يعد أي بند مكتملًا إلا إذا ارتبط باختبار منفذ أو Trace أو Notebook منفذ أو Runtime artifact محفوظ. وجود الكود وحده لا يثبت أن المسار يعمل.** لذلك لا تستخدم هذه المصفوفة حالة `Completed` قبل إنتاج الدليل الفعلي ومراجعته.
+
+## Phase 2 evidence note
+
+The deterministic Phase 2 tooling now provides Pydantic-validated inputs and outputs, real PDF/policy tool execution, fixed-rule findings, controlled CLI failures, and reproducible test/report artifacts in [`../evidence/phase2`](../evidence/phase2/). This is foundational deterministic tooling only: it does **not** satisfy or change the Planned status of reasoning agents, LangGraph, multi-agent coordination, observability, persistence, human interrupt/resume, or production deployment requirements.

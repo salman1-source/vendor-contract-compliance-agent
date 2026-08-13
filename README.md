@@ -83,3 +83,38 @@ flowchart TD
 ## تنبيه حماية البيانات
 
 **يُمنع رفع العقود السرية، أو البيانات الشخصية، أو السياسات الداخلية السرية، أو مفاتيح API والإنتاج إلى هذا المستودع.** استخدم بيانات مصطنعة وقيمًا تجريبية فقط، ولا تضع أسرارًا فعلية في `.env.example` أو السجل أو أدلة التشغيل.
+
+## Phase 2 — deterministic vertical slice
+
+Phase 2 implements a narrow, deterministic path over **synthetic data only**: page-aware PDF extraction, heading-based clause extraction, validated YAML policies, five explicit rules, and JSON/Markdown reports. It uses no AI, LLM, agent framework, probabilistic inference, or legal decision-making. Identical inputs produce identical findings and ordering; only the declared ISO 8601 run time varies between ordinary runs.
+
+### Setup and execution
+
+Python 3.11 or newer is required. Install the package and test dependencies in an isolated environment:
+
+```bash
+python -m pip install -e '.[test]'
+```
+
+First, generate the clearly labelled synthetic PDF fixture (it is created locally under `samples/` and intentionally ignored by Git):
+
+```bash
+python scripts/generate_synthetic_contract.py
+```
+
+Second, run the test suite (the tests also generate an isolated temporary PDF fixture automatically):
+
+```bash
+python -m pytest -q
+```
+
+Third, run the complete audit from the repository root:
+
+```bash
+python -m vendor_contract_compliance.cli \
+  --contract samples/synthetic_vendor_contract.pdf \
+  --policies policies/demo_policies.yaml \
+  --output-dir evidence/phase2
+```
+
+Expected ordered outcomes are `POL-001 PASS/LOW`, `POL-002 GAP/HIGH`, `POL-003 MISSING/HIGH`, `POL-004 GAP/MEDIUM`, and `POL-005 REVIEW/MEDIUM`, giving totals of PASS=1, GAP=2, MISSING=1, and REVIEW=1. Generated, non-sensitive evidence is in [`evidence/phase2`](evidence/phase2/); its missing-clause result deliberately has no page number or fabricated quotation.
