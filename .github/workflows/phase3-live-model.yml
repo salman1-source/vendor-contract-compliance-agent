@@ -1,0 +1,54 @@
+name: Phase 3 Live Model Evidence
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: OpenAI model name
+        required: false
+        default: gpt-5.6-luna
+permissions:
+  contents: read
+concurrency:
+  group: phase3-live-model
+  cancel-in-progress: false
+jobs:
+  one-model-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - name: Validate configuration without printing it
+        run: |
+          test -n "$OPENAI_API_KEY" || { echo 'Required GitHub secret is absent'; exit 1; }
+          [[ "$OPENAI_MODEL" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{2,79}$ ]] || { echo 'Invalid model input'; exit 1; }
+      - run: python -m pip install -e '.[test,agentic]'
+      - run: python scripts/generate_synthetic_contract.py
+      - name: Run one bounded OpenAI audit
+        run: python -m vendor_contract_compliance.agentic_cli --contract samples/synthetic_vendor_contract.pdf --policies policies/demo_policies.yaml --output-dir evidence/phase3/openai-manual --client openai
+      - name: Verify sanitized evidence
+        run: |
+          python - <<'PY'
+          import json
+          p=json.load(open('evidence/phase3/openai-manual/agentic_run.json'))
+          expected=[['POL-001','PASS','LOW'],['POL-002','GAP','HIGH'],['POL-003','MISSING','HIGH'],['POL-004','GAP','MEDIUM'],['POL-005','REVIEW','MEDIUM']]
+          assert p['client_type']=='openai'
+          assert p['route_status']=='APPROVED'
+          assert p['reviewer_decision']=='APPROVE'
+          assert p['error'] is None
+          assert [[f['policy_id'],f['status'],f['severity']] for f in p['findings']]==expected
+          tools=['extract_pdf_pages','extract_contract_clauses','load_demo_policies','run_deterministic_rules','write_agentic_report']
+          assert [e['tool_name'] for e in p['tool_events']]==tools
+          assert all(e['success'] for e in p['tool_events'])
+          assert p['graph_path']==['orchestrator','contract_analyst','compliance_analyst','independent_reviewer','report_builder']
+          PY
+          echo '### Phase 3 manual model check' >> "$GITHUB_STEP_SUMMARY"
+          echo 'One OpenAI run completed; deterministic findings and real tool events verified.' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase3-openai-sanitized-evidence
+          path: evidence/phase3/openai-manual/

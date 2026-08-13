@@ -4,9 +4,9 @@
 
 | متطلب التقييم | التنفيذ المخطط | الدليل المطلوب | الحالة الحالية |
 |---|---|---|---|
-| Reasoning and tool use | خطة Plan-and-Execute واستدعاءات أدوات حقيقية بمدخلات ومخرجات منظمة | Trace منفذ يبين الخطة، والاستدعاءات، ونتائج الأدوات | Planned |
-| LangGraph and state management | StateGraph بحالة Typed وتوجيه شرطي وعدّاد إعادة | اختبار مسارات وTrace للحالة والانتقالات | Planned |
-| Multi-agent system | Orchestrator وContract Analyst وCompliance Analyst وIndependent Reviewer بحالة مشتركة منظمة | تشغيل منفذ يبين حدود الأدوار وتسليم الحالة والمراجعة المستقلة | Planned |
+| Reasoning and tool use | خطة Plan-and-Execute واستدعاءات أدوات حقيقية بمدخلات ومخرجات منظمة | Scripted-client artifacts; real-model evidence pending | In Progress |
+| LangGraph and state management | StateGraph بحالة Typed وتوجيه شرطي وعدّاد إعادة | Scripted success/retry/exhaustion tests and graph export | In Progress |
+| Multi-agent system | Orchestrator وContract Analyst وCompliance Analyst وIndependent Reviewer بحالة مشتركة منظمة | Scripted role evidence; real-model evidence pending | In Progress |
 | Security guardrails | فحص ملفات، مقاومة Prompt Injection، تحقق schemas، وredaction مع fail closed | اختبارات عدائية منفذة وسجل حادث محجوب وعينة رفض | In Progress |
 | Observability | Tracing وmetrics مترابطة بمعرّف تشغيل غير حساس | Trace وملف metrics محفوظان لتشغيل ناجح وفاشل | Planned |
 | Persistence | SQLite checkpoint persistence لحالة قابلة للاستعادة | اختبار توقف/إعادة تشغيل يثبت استعادة النقطة | Planned |

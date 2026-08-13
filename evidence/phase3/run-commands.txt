@@ -1,0 +1,4 @@
+python -m pip install -e '.[test,agentic]'
+python scripts/generate_synthetic_contract.py
+python scripts/generate_phase3_evidence.py
+python -m pytest -q

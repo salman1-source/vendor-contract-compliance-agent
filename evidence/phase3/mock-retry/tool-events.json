@@ -1,0 +1,92 @@
+[
+  {
+    "tool_name": "extract_pdf_pages",
+    "requested_by": "contract_analyst",
+    "started_at": "2026-08-13T09:44:17.349775Z",
+    "completed_at": "2026-08-13T09:44:17.363772Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "4 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "extract_contract_clauses",
+    "requested_by": "contract_analyst",
+    "started_at": "2026-08-13T09:44:17.363812Z",
+    "completed_at": "2026-08-13T09:44:17.364024Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "4 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "load_demo_policies",
+    "requested_by": "compliance_analyst",
+    "started_at": "2026-08-13T09:44:17.364907Z",
+    "completed_at": "2026-08-13T09:44:17.374332Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "5 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "run_deterministic_rules",
+    "requested_by": "compliance_analyst",
+    "started_at": "2026-08-13T09:44:17.374363Z",
+    "completed_at": "2026-08-13T09:44:17.374466Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "5 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "extract_pdf_pages",
+    "requested_by": "contract_analyst",
+    "started_at": "2026-08-13T09:44:17.376098Z",
+    "completed_at": "2026-08-13T09:44:17.387011Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "4 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "extract_contract_clauses",
+    "requested_by": "contract_analyst",
+    "started_at": "2026-08-13T09:44:17.387055Z",
+    "completed_at": "2026-08-13T09:44:17.387176Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "4 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "load_demo_policies",
+    "requested_by": "compliance_analyst",
+    "started_at": "2026-08-13T09:44:17.387936Z",
+    "completed_at": "2026-08-13T09:44:17.392867Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "5 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "run_deterministic_rules",
+    "requested_by": "compliance_analyst",
+    "started_at": "2026-08-13T09:44:17.392897Z",
+    "completed_at": "2026-08-13T09:44:17.393010Z",
+    "success": true,
+    "safe_input_summary": "validated synthetic path or structured objects",
+    "safe_output_summary": "5 structured records",
+    "error_type": null
+  },
+  {
+    "tool_name": "write_agentic_report",
+    "requested_by": "report_builder",
+    "started_at": "2026-08-13T09:44:17.394420Z",
+    "completed_at": "2026-08-13T09:44:17.394420Z",
+    "success": true,
+    "safe_input_summary": "validated AgenticRunResult",
+    "safe_output_summary": "four sanitized report files",
+    "error_type": null
+  }
+]
