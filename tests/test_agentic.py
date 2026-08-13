@@ -64,11 +64,27 @@ def test_fake_openai_structured_plan_parsing():
     fake=FakeResponses(parsed=plan); result=openai_with(fake).structured("orchestrator",ExecutionPlan,{"allowed_tools":"Phase 2 only"})
     assert result==plan and fake.kwargs[0]["text_format"] is ExecutionPlan
 
-def test_fake_openai_strict_function_call_and_rejects_wrong_tool():
-    fake=FakeResponses(call_name="extract_pdf_pages"); result=openai_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"]})
-    assert result.tool_name=="extract_pdf_pages" and fake.kwargs[0]["parallel_tool_calls"] is False and fake.kwargs[0]["tools"][0]["strict"] is True
+def test_fake_openai_strict_function_call_includes_expected_next():
+    allowed=["extract_pdf_pages","extract_contract_clauses"]
+    fake=FakeResponses(call_name="extract_pdf_pages"); result=openai_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":allowed,"expected_next":"extract_pdf_pages"})
+    assert result.tool_name=="extract_pdf_pages" and "extract_pdf_pages" in fake.kwargs[0]["input"] and "Request that tool only" in fake.kwargs[0]["input"]
+    assert [tool["name"] for tool in fake.kwargs[0]["tools"]]==allowed and fake.kwargs[0]["tool_choice"]=="required"
+    assert fake.kwargs[0]["parallel_tool_calls"] is False and all(tool["strict"] is True for tool in fake.kwargs[0]["tools"])
+
+def test_fake_openai_rejects_tool_outside_allowlist():
     rogue=FakeResponses(call_name="load_demo_policies")
-    with pytest.raises(ModelClientError,match="allowlist"): openai_with(rogue).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"]})
+    with pytest.raises(ModelClientError,match="allowlist"): openai_with(rogue).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"],"expected_next":"extract_pdf_pages"})
+
+def test_fake_openai_rejects_allowed_tool_outside_plan_order():
+    fake=FakeResponses(call_name="extract_contract_clauses")
+    with pytest.raises(ModelClientError,match="execution plan order"):
+        openai_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages","extract_contract_clauses"],"expected_next":"extract_pdf_pages"})
+
+def test_fake_openai_rejects_expected_next_outside_allowlist_without_request():
+    fake=FakeResponses(call_name="extract_pdf_pages")
+    with pytest.raises(ModelClientError,match="Expected plan tool.*allowlist"):
+        openai_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"],"expected_next":"load_demo_policies"})
+    assert fake.kwargs==[]
 
 @pytest.mark.parametrize("status,parsed",[("incomplete",None),("completed",None)])
 def test_fake_openai_incomplete_or_refusal(status,parsed):

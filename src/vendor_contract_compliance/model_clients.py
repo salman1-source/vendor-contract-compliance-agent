@@ -54,12 +54,18 @@ class OpenAIModelClient:
         try:
             if schema is ToolRequest:
                 allowed = context["allowed_tools"]
-                response = self._client.responses.create(model=self.model_name, input=f"Role {role}: select the next required tool from the supplied functions.",
+                expected_next = context["expected_next"]
+                if expected_next not in allowed:
+                    raise ModelClientError("Expected plan tool is outside the role allowlist")
+                instruction = (f"Role {role}: the next tool required by the validated ExecutionPlan is "
+                    f"{expected_next}. Request that tool only from the supplied role tools.")
+                response = self._client.responses.create(model=self.model_name, input=instruction,
                     tools=[{"type":"function","name":tool,"description":"Execute an allowed deterministic Phase 2 operation.","parameters":{"type":"object","properties":{},"additionalProperties":False},"strict":True} for tool in allowed],
                     tool_choice="required", parallel_tool_calls=False, max_output_tokens=128)
                 calls = [item for item in response.output if item.type == "function_call"]
                 if response.status != "completed" or len(calls) != 1: raise ModelClientError("OpenAI returned a refusal, incomplete, or invalid tool request")
                 if calls[0].name not in allowed: raise ModelClientError("OpenAI requested a tool outside the role allowlist")
+                if calls[0].name != expected_next: raise ModelClientError("OpenAI requested an allowed tool outside the execution plan order")
                 request = schema(tool_name=calls[0].name)
                 return request
             response = self._client.responses.parse(model=self.model_name,
