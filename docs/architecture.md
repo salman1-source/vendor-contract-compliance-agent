@@ -74,4 +74,8 @@ The executable nodes are `orchestrator`, `contract_analyst`, `compliance_analyst
 
 Authority is narrow: planning and tool requests are model-assisted; extraction and all findings come from Phase 2 functions; the reviewer checks completeness but cannot mutate findings. Phase 3A excludes advanced injection defenses, tracing/metrics, persistence, human interrupt/resume, API, containers, and UI.
 
+## Phase 3B provider boundary
+
+A central factory requires one explicit client type: `scripted`, `openai`, `openrouter`, or `gemini`. It never falls back. OpenAI defaults to `gpt-5.6-luna`; OpenRouter defaults to `openai/gpt-5.6-luna` and uses the OpenAI SDK at `https://openrouter.ai/api/v1`; Gemini defaults to `gemini-3.6-flash` and uses the Google GenAI SDK's stateless Interactions API with `store=false`. Each adapter only requests a typed plan/review or exactly one function; deterministic application tools retain execution authority. Provider and model are recorded independently in sanitized results.
+
 The execution plan is authoritative rather than documentary: Pydantic requires the canonical four-tool order, each agent executes only its portion of those plan steps, and every model tool request is checked against both the role allowlist and the next planned tool. A mismatch fails closed. Reviewer input contains redacted structured finding fields, safe tool success summaries, page numbers, missing-clause state, graph path, and retry counters—never raw contract text.

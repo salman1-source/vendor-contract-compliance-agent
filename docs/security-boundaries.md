@@ -41,3 +41,8 @@
 - SQLite مناسب للنموذج التدريبي المخطط، وليس افتراضًا تلقائيًا للتوسع أو التوفر الإنتاجي.
 - يبقى الخطأ البشري في الاعتماد ممكنًا، ويجب توثيق الصلاحيات والمراجعة.
 - لم تُنفذ هذه الضوابط بعد؛ ستقاس فعاليتها بأدلة واختبارات منفذة في مراحل لاحقة.
+# Provider credentials and live evidence
+
+Provider selection is explicit and has no fallback. `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, and `GEMINI_API_KEY` remain separate; absence of an unselected credential cannot block a run, while absence of the selected credential fails before a request. OpenRouter remains labeled `openrouter` despite using the OpenAI SDK. Gemini interactions are stateless (`store=false`) and never use automatic SDK tool execution.
+
+Only a manually dispatched workflow creates live-provider evidence. Persisted errors contain allowlisted status metadata and generic diagnostics, never raw provider output, refusal or safety text, thought signatures, reasoning, prompts, evidence, response bodies, headers, or credentials. Provider free-tier or credit limits may still return sanitized rate-limit failures.

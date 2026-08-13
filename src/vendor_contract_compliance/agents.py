@@ -9,7 +9,7 @@ def _failure(state, exc, fallback, stage):
         state.update(error=str(exc), error_code=exc.safe_code, error_stage=exc.stage,
                      response_status=exc.response_status, incomplete_reason=exc.incomplete_reason)
     else:
-        state.update(error=fallback, error_code="OPENAI_PLAN_ERROR", error_stage=stage)
+        state.update(error=fallback, error_code="MODEL_PLAN_ERROR", error_stage=stage)
     state["route_status"]="FAIL"
 
 def _event(state, agent, action):
