@@ -3,6 +3,8 @@
 
 مشروع تخرج ضمن برنامج **Advanced Agentic AI Systems Engineering** في **SDAIA Academy — August 2026**.
 
+- **SDAIA Academy GitHub:** [https://github.com/SDAIA/academy](https://github.com/SDAIA/academy)
+
 > **الحالة الحالية:** Phase 3B — explicit audited provider adapters; committed evidence remains scripted, not live-provider evidence.
 
 ## المشكلة
