@@ -58,3 +58,6 @@ uploads/
 *~
 .DS_Store
 Thumbs.db
+
+# Locally generated synthetic Phase 2 fixture
+samples/synthetic_vendor_contract.pdf
