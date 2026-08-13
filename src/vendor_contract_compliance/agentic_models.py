@@ -51,7 +51,9 @@ class AgentEvent(StrictModel):
 class AgenticRunResult(StrictModel):
     run_id: str
     model_name: str
-    client_type: Literal["scripted", "openai"]
+    client_type: Literal["scripted", "openai", "openrouter", "gemini"]
+    provider: Literal["scripted", "openai", "openrouter", "gemini"]
+    model: str
     plan: ExecutionPlan
     graph_path: list[str]
     retry_count: int = Field(ge=0)
@@ -84,5 +86,5 @@ class AgentState(TypedDict, total=False):
     tool_events: list[ToolEvent]; reviewer_decision: ReviewerDecision; reviewer_feedback: str
     retry_count: int; max_retries: int; route_status: str; error: str | None
     error_code: str | None; error_stage: str | None; response_status: str | None; incomplete_reason: str | None
-    final_report_paths: list[str]; model_name: str; client_type: str
+    final_report_paths: list[str]; model_name: str; client_type: str; provider: str; model: str
     agent_events: list[AgentEvent]; graph_path: list[str]

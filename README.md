@@ -3,7 +3,7 @@
 
 مشروع تخرج ضمن برنامج **Advanced Agentic AI Systems Engineering** في **SDAIA Academy — August 2026**.
 
-> **الحالة الحالية:** Phase 3A — scripted-model LangGraph workflow; no OpenAI run evidence yet.
+> **الحالة الحالية:** Phase 3B — explicit audited provider adapters; committed evidence remains scripted, not live-provider evidence.
 
 ## المشكلة
 
@@ -129,4 +129,6 @@ python scripts/generate_synthetic_contract.py
 python -m vendor_contract_compliance.agentic_cli --contract samples/synthetic_vendor_contract.pdf --policies policies/demo_policies.yaml --output-dir evidence/phase3/manual --client scripted
 ```
 
-Retry scenarios use `--scenario retry` or `--scenario exhaustion`. After merging, **Phase 3 Live Model Evidence** can be started manually with `workflow_dispatch`. Store `OPENAI_API_KEY` only as a GitHub Actions secret—never in this repository. The workflow has not been run and real-model behavior is not evidenced here.
+Retry scenarios use `--scenario retry` or `--scenario exhaustion`. Live use requires an explicit `--client openai`, `--client openrouter`, or `--client gemini`; `--model` is optional. Defaults are `gpt-5.6-luna`, `openai/gpt-5.6-luna`, and `gemini-3.6-flash`, respectively. Credentials are isolated in `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, and `GEMINI_API_KEY`; only the selected provider's key is required. There is no automatic fallback or silent provider switch.
+
+OpenRouter is recorded as a separate provider even though its adapter uses the official OpenAI Python SDK with OpenRouter's Responses-compatible endpoint. Gemini uses the official Google GenAI SDK and the stateless Interactions API (`store=false`); SDK automatic tool execution is not enabled. Live evidence can only be created by manually dispatching **Phase 3 Multi-Provider Live Model Evidence** and selecting one provider. The workflow has not been run as part of this change. Free-tier quotas or available credits can still cause provider rate limits.
