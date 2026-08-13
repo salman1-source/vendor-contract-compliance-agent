@@ -21,13 +21,19 @@ PLAN = {"steps": [
 
 class ScriptedModelClient:
     client_type = "scripted"
-    def __init__(self, reviewer_decisions=None, model_name="scripted-phase3", invalid_role=None):
+    def __init__(self, reviewer_decisions=None, model_name="scripted-phase3", invalid_role=None, tool_requests=None, plan=None):
         self.model_name, self.invalid_role = model_name, invalid_role
         self.decisions = deque(reviewer_decisions or ["APPROVE"])
+        self.tool_requests = deque(tool_requests or [])
+        self.plan = plan or PLAN
+        self.contexts = []
     def structured(self, role, schema, context):
+        self.contexts.append((role, schema, context))
         if role == self.invalid_role: return schema.model_validate({"invalid":"redacted"})
-        if schema is ExecutionPlan: data = PLAN
-        elif schema is ToolRequest: data = {"tool_name": context["tool_name"]}
+        if schema is ExecutionPlan: data = self.plan
+        elif schema is ToolRequest:
+            allowed = context["allowed_tools"]
+            data = {"tool_name": self.tool_requests.popleft() if self.tool_requests else context["expected_next"]}
         elif schema is ReviewerResult:
             decision = self.decisions.popleft() if self.decisions else "APPROVE"
             data = {"decision":decision, "feedback":"Evidence complete." if decision == "APPROVE" else "Re-run extraction to complete evidence."}
@@ -47,13 +53,15 @@ class OpenAIModelClient:
         # equally strict function schema and disable parallel calls.
         try:
             if schema is ToolRequest:
-                tool = context["tool_name"]
-                response = self._client.responses.create(model=self.model_name, input=f"Role {role}: request only the required tool {tool}.",
-                    tools=[{"type":"function","name":tool,"description":"Execute the required deterministic Phase 2 operation.","parameters":{"type":"object","properties":{},"additionalProperties":False},"strict":True}],
-                    tool_choice={"type":"function","name":tool}, parallel_tool_calls=False, max_output_tokens=128)
+                allowed = context["allowed_tools"]
+                response = self._client.responses.create(model=self.model_name, input=f"Role {role}: select the next required tool from the supplied functions.",
+                    tools=[{"type":"function","name":tool,"description":"Execute an allowed deterministic Phase 2 operation.","parameters":{"type":"object","properties":{},"additionalProperties":False},"strict":True} for tool in allowed],
+                    tool_choice="required", parallel_tool_calls=False, max_output_tokens=128)
                 calls = [item for item in response.output if item.type == "function_call"]
-                if response.status != "completed" or len(calls) != 1 or calls[0].name != tool: raise ModelClientError("OpenAI returned an incomplete or invalid tool request")
-                return schema(tool_name=tool)
+                if response.status != "completed" or len(calls) != 1: raise ModelClientError("OpenAI returned a refusal, incomplete, or invalid tool request")
+                if calls[0].name not in allowed: raise ModelClientError("OpenAI requested a tool outside the role allowlist")
+                request = schema(tool_name=calls[0].name)
+                return request
             response = self._client.responses.parse(model=self.model_name,
                 input=f"Act as {role}. Return only the requested structured result. Context: {context}",
                 text_format=schema, max_output_tokens=512)

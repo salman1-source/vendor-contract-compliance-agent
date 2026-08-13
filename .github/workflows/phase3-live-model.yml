@@ -37,8 +37,14 @@ jobs:
           p=json.load(open('evidence/phase3/openai-manual/agentic_run.json'))
           expected=[['POL-001','PASS','LOW'],['POL-002','GAP','HIGH'],['POL-003','MISSING','HIGH'],['POL-004','GAP','MEDIUM'],['POL-005','REVIEW','MEDIUM']]
           assert p['client_type']=='openai'
+          assert p['route_status']=='APPROVED'
+          assert p['reviewer_decision']=='APPROVE'
+          assert p['error'] is None
           assert [[f['policy_id'],f['status'],f['severity']] for f in p['findings']]==expected
-          assert any(e['success'] for e in p['tool_events'])
+          tools=['extract_pdf_pages','extract_contract_clauses','load_demo_policies','run_deterministic_rules','write_agentic_report']
+          assert [e['tool_name'] for e in p['tool_events']]==tools
+          assert all(e['success'] for e in p['tool_events'])
+          assert p['graph_path']==['orchestrator','contract_analyst','compliance_analyst','independent_reviewer','report_builder']
           PY
           echo '### Phase 3 manual model check' >> "$GITHUB_STEP_SUMMARY"
           echo 'One OpenAI run completed; deterministic findings and real tool events verified.' >> "$GITHUB_STEP_SUMMARY"

@@ -14,6 +14,13 @@ class PlanStep(StrictModel):
 class ExecutionPlan(StrictModel):
     steps: list[PlanStep] = Field(min_length=4)
 
+    @model_validator(mode="after")
+    def allowed_order(self):
+        expected = ["extract_pdf_pages", "extract_contract_clauses", "load_demo_policies", "run_deterministic_rules"]
+        if [step.tool for step in self.steps] != expected:
+            raise ValueError("execution plan must contain the four allowed tools in canonical order")
+        return self
+
 class ToolRequest(StrictModel):
     tool_name: ToolName
 
