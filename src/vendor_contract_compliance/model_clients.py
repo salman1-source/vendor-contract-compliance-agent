@@ -188,19 +188,21 @@ class GeminiModelClient:
                     tools=[{"type": "function", "name": name, "description": "Request an allowed deterministic Phase 2 operation.",
                             "parameters": {"type": "object", "properties": {}, "additionalProperties": False}} for name in allowed], **common)
                 self._check(response, role)
-                calls = [item for item in (getattr(response, "outputs", None) or []) if getattr(item, "type", None) == "function_call"]
+                calls = [step for step in (getattr(response, "steps", None) or [])
+                         if getattr(step, "type", None) == "function_call"]
                 if len(calls) != 1 or calls[0].name not in allowed or calls[0].name != expected:
                     raise ModelClientError("Invalid, unauthorized, or out-of-order function request", safe_code="GEMINI_INVALID_TOOL_CALL",
                                            stage=role, response_status=getattr(response, "status", None))
                 return schema(tool_name=calls[0].name)
             response = self._client.interactions.create(
                 input=f"Act as {role}. Return only the requested structured result. Context: {context}",
-                response_format=schema.model_json_schema(), response_mime_type="application/json", **common)
+                response_format={"type": "text", "mime_type": "application/json",
+                                 "schema": schema.model_json_schema()}, **common)
             self._check(response, role)
-            texts = [item.text for item in (getattr(response, "outputs", None) or []) if getattr(item, "type", None) == "text"]
-            if len(texts) != 1:
+            output_text = getattr(response, "output_text", None)
+            if not isinstance(output_text, str) or not output_text.strip():
                 raise ModelClientError("Gemini returned no single structured result", safe_code="GEMINI_SCHEMA_ERROR", stage=role)
-            return schema.model_validate_json(texts[0])
+            return schema.model_validate_json(output_text)
         except ModelClientError:
             raise
         except (ValidationError, json.JSONDecodeError):

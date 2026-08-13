@@ -1,4 +1,5 @@
 import json
+import inspect
 import sys
 from types import SimpleNamespace
 
@@ -105,32 +106,49 @@ class FakeInteractions:
 
 def gemini_with(fake): return GeminiModelClient(sdk_client=SimpleNamespace(interactions=fake))
 
-def text_output(value): return SimpleNamespace(type="text",text=value)
+def interaction(*, output_text=None, steps=None, status="completed"):
+    return SimpleNamespace(status=status, output_text=output_text, steps=steps or [])
 
 def test_gemini_structured_plan_is_stateless_and_disables_reasoning_persistence():
-    fake=FakeInteractions(SimpleNamespace(status="completed",outputs=[text_output(json.dumps({"steps":[{"step":"p","tool":"extract_pdf_pages"},{"step":"c","tool":"extract_contract_clauses"},{"step":"l","tool":"load_demo_policies"},{"step":"r","tool":"run_deterministic_rules"}]}))]))
+    fake=FakeInteractions(interaction(output_text=json.dumps({"steps":[{"step":"p","tool":"extract_pdf_pages"},{"step":"c","tool":"extract_contract_clauses"},{"step":"l","tool":"load_demo_policies"},{"step":"r","tool":"run_deterministic_rules"}]})))
     result=gemini_with(fake).structured("orchestrator",ExecutionPlan,{})
     assert len(result.steps)==4 and fake.kwargs[0]["store"] is False
-    assert fake.kwargs[0]["response_mime_type"]=="application/json"
+    assert fake.kwargs[0]["response_format"]=={"type":"text","mime_type":"application/json","schema":ExecutionPlan.model_json_schema()}
+    assert "response_mime_type" not in fake.kwargs[0]
     assert fake.kwargs[0]["generation_config"]["thinking_summaries"]=="none"
 
 def test_gemini_exactly_one_function_and_no_automatic_execution():
     call=SimpleNamespace(type="function_call",name="extract_pdf_pages",arguments={})
-    fake=FakeInteractions(SimpleNamespace(status="completed",outputs=[call]))
+    fake=FakeInteractions(interaction(steps=[call]))
     result=gemini_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"],"expected_next":"extract_pdf_pages"})
     assert result.tool_name=="extract_pdf_pages"
     assert fake.kwargs[0]["generation_config"]["tool_choice"]=="any"
     assert "function_responses" not in fake.kwargs[0] and "automatic_function_calling" not in fake.kwargs[0]
 
-@pytest.mark.parametrize("outputs", [[], [SimpleNamespace(type="function_call",name="extract_pdf_pages"),SimpleNamespace(type="function_call",name="extract_pdf_pages")], [SimpleNamespace(type="function_call",name="load_demo_policies")]])
-def test_gemini_rejects_missing_multiple_or_unauthorized_functions(outputs):
-    fake=FakeInteractions(SimpleNamespace(status="completed",outputs=outputs))
-    with pytest.raises(ModelClientError): gemini_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":["extract_pdf_pages"],"expected_next":"extract_pdf_pages"})
+@pytest.mark.parametrize("steps,allowed,expected", [
+    ([], ["extract_pdf_pages"], "extract_pdf_pages"),
+    ([SimpleNamespace(type="function_call",name="extract_pdf_pages"),SimpleNamespace(type="function_call",name="extract_pdf_pages")], ["extract_pdf_pages"], "extract_pdf_pages"),
+    ([SimpleNamespace(type="function_call",name="load_demo_policies")], ["extract_pdf_pages"], "extract_pdf_pages"),
+    ([SimpleNamespace(type="function_call",name="extract_contract_clauses")], ["extract_pdf_pages","extract_contract_clauses"], "extract_pdf_pages"),
+])
+def test_gemini_rejects_missing_multiple_unauthorized_or_out_of_order_functions(steps,allowed,expected):
+    fake=FakeInteractions(interaction(steps=steps))
+    with pytest.raises(ModelClientError) as caught:
+        gemini_with(fake).structured("contract_analyst",ToolRequest,{"allowed_tools":allowed,"expected_next":expected})
+    assert caught.value.safe_code == "GEMINI_INVALID_TOOL_CALL"
 
-@pytest.mark.parametrize("response", [SimpleNamespace(status="incomplete",outputs=[]),SimpleNamespace(status="failed",outputs=[text_output("private safety refusal")]),SimpleNamespace(status="completed",outputs=[text_output("not-json")]),SimpleNamespace(status="completed",outputs=[SimpleNamespace(type="thought",text="private reasoning")])])
-def test_gemini_incomplete_blocked_malformed_or_thought_only_fails_closed(response):
+@pytest.mark.parametrize("response", [
+    interaction(status="incomplete"),
+    interaction(status="failed", output_text="private safety refusal"),
+    interaction(output_text=""),
+    interaction(output_text="not-json"),
+    interaction(output_text='{"steps": []}'),
+    interaction(steps=[SimpleNamespace(type="thought",text="private reasoning",signature="private signature")]),
+])
+def test_gemini_incomplete_blocked_empty_malformed_schema_or_thought_only_fails_closed(response):
     with pytest.raises(ModelClientError) as caught: gemini_with(FakeInteractions(response)).structured("orchestrator",ExecutionPlan,{})
-    assert "private" not in str(caught.value) and "reasoning" not in str(caught.value)
+    assert caught.value.safe_code in {"GEMINI_INCOMPLETE","GEMINI_API_ERROR","GEMINI_SCHEMA_ERROR"}
+    assert "private" not in str(caught.value) and "reasoning" not in str(caught.value) and "signature" not in str(caught.value)
 
 @pytest.mark.parametrize("status",[400,401,403,429,500])
 def test_gemini_api_diagnostics_are_sanitized(status):
@@ -148,9 +166,23 @@ def test_sanitized_result_records_provider_model_and_unchanged_findings(root,con
 
 def test_raw_gemini_output_not_persisted_on_failure(root,contract_path,tmp_path):
     secret="raw refusal and thought signature"
-    response=SimpleNamespace(status="failed",outputs=[text_output(secret),SimpleNamespace(type="thought",text=secret)])
+    response=interaction(status="failed",output_text=secret,steps=[SimpleNamespace(type="thought",text=secret,signature=secret)])
     run_agentic(gemini_with(FakeInteractions(response)),contract_path,root/"policies/demo_policies.yaml",tmp_path)
     assert secret not in (tmp_path/"agentic_run.json").read_text()
+
+def test_gemini_interactions_kwargs_match_installed_sdk_without_request():
+    """Contract check: every adapter kwarg is accepted by the installed SDK surface."""
+    fake=FakeInteractions(interaction(output_text='{"steps":[]}'))
+    with pytest.raises(ModelClientError):
+        gemini_with(fake).structured("orchestrator",ExecutionPlan,{})
+    kwargs=fake.kwargs[0]
+    from google import genai
+    signature=inspect.signature(genai.Client(api_key="fake-not-a-secret").interactions.create)
+    assert set(kwargs) <= set(signature.parameters)
+    assert "response_mime_type" not in kwargs
+    assert "outputs" not in inspect.getsource(GeminiModelClient.structured)
+    assert 'getattr(response, "steps"' in inspect.getsource(GeminiModelClient.structured)
+    assert 'getattr(response, "output_text"' in inspect.getsource(GeminiModelClient.structured)
 
 def test_workflow_is_manual_and_explicit(root):
     workflow=(root/".github/workflows/phase3-live-model.yml").read_text()
