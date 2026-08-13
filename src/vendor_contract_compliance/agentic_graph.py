@@ -30,7 +30,7 @@ def build_graph(client):
     return graph
 
 def _result(s):
-    return AgenticRunResult(run_id=s["run_id"],model_name=s["model_name"],client_type=s["client_type"],plan=s["plan"],graph_path=s["graph_path"],retry_count=min(s["retry_count"],s["max_retries"]),max_retries=s["max_retries"],reviewer_decision=s["reviewer_decision"],reviewer_feedback=s["reviewer_feedback"],findings=s.get("findings",[]),tool_events=s.get("tool_events",[]),agent_events=s.get("agent_events",[]),route_status=s.get("route_status",""),error=s.get("error"),disclaimer=DISCLAIMER)
+    return AgenticRunResult(run_id=s["run_id"],model_name=s["model_name"],client_type=s["client_type"],plan=s["plan"],graph_path=s["graph_path"],retry_count=min(s["retry_count"],s["max_retries"]),max_retries=s["max_retries"],reviewer_decision=s["reviewer_decision"],reviewer_feedback=s["reviewer_feedback"],findings=s.get("findings",[]),tool_events=s.get("tool_events",[]),agent_events=s.get("agent_events",[]),route_status=s.get("route_status",""),error=s.get("error"),error_code=s.get("error_code"),error_stage=s.get("error_stage"),response_status=s.get("response_status"),incomplete_reason=s.get("incomplete_reason"),disclaimer=DISCLAIMER)
 
 def run_agentic(client, contract:Path, policies:Path, output:Path, max_retries=2):
     initial=AgentState(run_id=str(uuid4()),contract_path=str(contract),policies_path=str(policies),output_dir=str(output),retry_count=0,max_retries=max_retries,tool_events=[],agent_events=[],graph_path=[],model_name=client.model_name,client_type=client.client_type,route_status="RUNNING",error=None)

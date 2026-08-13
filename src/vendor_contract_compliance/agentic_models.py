@@ -63,6 +63,10 @@ class AgenticRunResult(StrictModel):
     agent_events: list[AgentEvent]
     route_status: str
     error: str | None = None
+    error_code: str | None = None
+    error_stage: str | None = None
+    response_status: str | None = None
+    incomplete_reason: str | None = None
     disclaimer: str
 
     @model_validator(mode="after")
@@ -79,5 +83,6 @@ class AgentState(TypedDict, total=False):
     clauses: dict[str, ExtractedClause]; policies: list[PolicyRule]; findings: list[Finding]
     tool_events: list[ToolEvent]; reviewer_decision: ReviewerDecision; reviewer_feedback: str
     retry_count: int; max_retries: int; route_status: str; error: str | None
+    error_code: str | None; error_stage: str | None; response_status: str | None; incomplete_reason: str | None
     final_report_paths: list[str]; model_name: str; client_type: str
     agent_events: list[AgentEvent]; graph_path: list[str]

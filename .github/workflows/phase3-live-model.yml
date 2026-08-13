@@ -29,6 +29,8 @@ jobs:
       - run: python -m pip install -e '.[test,agentic]'
       - run: python scripts/generate_synthetic_contract.py
       - name: Run one bounded OpenAI audit
+        id: audit
+        continue-on-error: true
         run: python -m vendor_contract_compliance.agentic_cli --contract samples/synthetic_vendor_contract.pdf --policies policies/demo_policies.yaml --output-dir evidence/phase3/openai-manual --client openai
       - name: Verify sanitized evidence
         run: |
@@ -49,6 +51,15 @@ jobs:
           echo '### Phase 3 manual model check' >> "$GITHUB_STEP_SUMMARY"
           echo 'One OpenAI run completed; deterministic findings and real tool events verified.' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: phase3-openai-sanitized-evidence
+          name: phase3-openai-sanitized-evidence-attempt-${{ github.run_attempt }}
           path: evidence/phase3/openai-manual/
+          if-no-files-found: warn
+      - name: Enforce approved result
+        if: always()
+        env:
+          AUDIT_OUTCOME: ${{ steps.audit.outcome }}
+        run: |
+          test "$AUDIT_OUTCOME" = success
+          python -c "import json; assert json.load(open('evidence/phase3/openai-manual/agentic_run.json'))['route_status'] == 'APPROVED'"
