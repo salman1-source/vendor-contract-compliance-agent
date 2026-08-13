@@ -65,3 +65,11 @@
 ## شكل النشر المستقبلي
 
 يُخطط لخدمة **FastAPI** تعرض نقاط إدخال وحالة وصحة مضبوطة؛ ومحرك LangGraph يدير StateGraph؛ و**SQLite** يحفظ checkpoints في النموذج التدريبي؛ و**Docker Compose** يشغّل المكونات محليًا بإعداد قابل للتكرار. ستُفصل الأسرار عبر متغيرات البيئة، وتُربط الأدلة بالـ traces. هذا الشكل غير منفذ في Phase 1 ولا يمثل جاهزية إنتاجية.
+
+## Phase 3A implemented graph
+
+The typed `AgentState` carries paths, structured plan, pages, clauses, policies, immutable findings, safe tool/agent events, reviewer decision and feedback, retry counters (default `max_retries=2`), route/error state, model metadata, graph path, and report paths. It contains no free-form conversation used for routing.
+
+The executable nodes are `orchestrator`, `contract_analyst`, `compliance_analyst`, `independent_reviewer`, `report_builder`, and `controlled_failure`. Edges follow that order through review; `APPROVE` builds reports, `RETRY` returns to contract analysis while budget remains, and `FAIL` or exhaustion ends safely. The retry is a LangGraph conditional edge, not an external Python loop.
+
+Authority is narrow: planning and tool requests are model-assisted; extraction and all findings come from Phase 2 functions; the reviewer checks completeness but cannot mutate findings. Phase 3A excludes advanced injection defenses, tracing/metrics, persistence, human interrupt/resume, API, containers, and UI.

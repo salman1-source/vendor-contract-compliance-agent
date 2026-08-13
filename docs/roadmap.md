@@ -16,19 +16,21 @@
 
 **شرط الخروج:** اختبار end-to-end منفذ وقابل لإعادة الإنتاج على fixture مصطنع، مع تقرير مرتبط بالأدلة ومسار فشل مضبوط؛ دون ادعاء قدرات وكيلة غير موجودة.
 
-## Phase 3: Agentic workflow — Planned
+## Phase 3A: Agentic workflow — Implemented with scripted client
 
 **الأعمال المطلوبة:** تطبيق LangGraph StateGraph وPlan-and-Execute والأدوار الأربعة واستدعاءات الأدوات الحقيقية والتوجيه الشرطي وإعادة المحاولة المحدودة.
 
 **شرط الخروج:** Traces واختبارات منفذة تثبت المسار الناجح، والمراجعة المستقلة، ومسار bounded retry الذي يتوقف عند الحد.
 
-## Phase 4: Security and observability
+The LangGraph workflow and scripted tests are implemented. **Phase 3B is pending** manual OpenAI workflow evidence; no real OpenAI execution is claimed.
+
+## Phase 4: Security and observability — Planned
 
 **الأعمال المطلوبة:** تطبيق فحص المدخلات، وكشف Prompt Injection، وTyped validation، وredaction، وfail closed، وإضافة tracing وmetrics واختبارات عدائية.
 
 **شرط الخروج:** أدلة منفذة على حظر عينة الحقن، وحجب البيانات الحساسة، والفشل المضبوط، مع Trace وmetrics غير حساسة لكل مسار.
 
-## Phase 5: Persistence, human approval, and delivery
+## Phase 5: Persistence, human approval, and delivery — Planned
 
 **الأعمال المطلوبة:** إضافة SQLite checkpoints وinterrupt/resume بشري حقيقي، ثم FastAPI وDocker Compose وفحوص الصحة ووثائق التشغيل.
 

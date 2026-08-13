@@ -1,0 +1,26 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	orchestrator(orchestrator)
+	contract_analyst(contract_analyst)
+	compliance_analyst(compliance_analyst)
+	independent_reviewer(independent_reviewer)
+	report_builder(report_builder)
+	controlled_failure(controlled_failure)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> orchestrator;
+	compliance_analyst --> independent_reviewer;
+	contract_analyst --> compliance_analyst;
+	independent_reviewer -. &nbsp;retry&nbsp; .-> contract_analyst;
+	independent_reviewer -. &nbsp;fail&nbsp; .-> controlled_failure;
+	independent_reviewer -. &nbsp;approve&nbsp; .-> report_builder;
+	orchestrator --> contract_analyst;
+	controlled_failure --> __end__;
+	report_builder --> __end__;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

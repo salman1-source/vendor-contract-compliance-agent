@@ -3,7 +3,7 @@
 
 مشروع تخرج ضمن برنامج **Advanced Agentic AI Systems Engineering** في **SDAIA Academy — August 2026**.
 
-> **الحالة الحالية:** Phase 1 — Foundation and evaluation traceability.
+> **الحالة الحالية:** Phase 3A — scripted-model LangGraph workflow; no OpenAI run evidence yet.
 
 ## المشكلة
 
@@ -118,3 +118,15 @@ python -m vendor_contract_compliance.cli \
 ```
 
 Expected ordered outcomes are `POL-001 PASS/LOW`, `POL-002 GAP/HIGH`, `POL-003 MISSING/HIGH`, `POL-004 GAP/MEDIUM`, and `POL-005 REVIEW/MEDIUM`, giving totals of PASS=1, GAP=2, MISSING=1, and REVIEW=1. Generated, non-sensitive evidence is in [`evidence/phase2`](evidence/phase2/); its missing-clause result deliberately has no page number or fabricated quotation.
+
+## Phase 3A — agentic orchestration, deterministic judgment
+
+Phase 3A wraps Phase 2 in a real LangGraph `StateGraph`. The **Orchestrator** produces a typed plan; the **Contract Analyst** requests page and clause tools; the **Compliance Analyst** requests policy loading and the immutable deterministic rule engine; and the **Independent Reviewer** may approve completeness, request a bounded retry, or fail safely. The model never sets or edits a finding and never approves or rejects a contract.
+
+```bash
+python -m pip install -e '.[test,agentic]'
+python scripts/generate_synthetic_contract.py
+python -m vendor_contract_compliance.agentic_cli --contract samples/synthetic_vendor_contract.pdf --policies policies/demo_policies.yaml --output-dir evidence/phase3/manual --client scripted
+```
+
+Retry scenarios use `--scenario retry` or `--scenario exhaustion`. After merging, **Phase 3 Live Model Evidence** can be started manually with `workflow_dispatch`. Store `OPENAI_API_KEY` only as a GitHub Actions secret—never in this repository. The workflow has not been run and real-model behavior is not evidenced here.
