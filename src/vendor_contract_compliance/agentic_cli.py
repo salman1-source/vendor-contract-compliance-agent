@@ -14,7 +14,11 @@ def main(argv=None):
         else:
             decisions={"success":["APPROVE"],"retry":["RETRY","APPROVE"],"exhaustion":["RETRY","RETRY","RETRY"]}[args.scenario]; client=ScriptedModelClient(decisions)
         result=run_agentic(client,args.contract,args.policies,args.output_dir)
-    except (ModelClientError,ValueError,OSError) as exc: print(f"Agentic audit failed: {exc}",file=sys.stderr); return 1
+    except (ModelClientError,ValueError,OSError) as exc:
+        print(f"Agentic audit failed safely: code={getattr(exc,'safe_code',None)} stage={getattr(exc,'stage',None)} status={getattr(exc,'response_status',None)} reason={getattr(exc,'incomplete_reason',None)}",file=sys.stderr); return 1
+    if result.route_status != "APPROVED":
+        print(f"Agentic audit failed safely: code={result.error_code} stage={result.error_stage} status={result.response_status} reason={result.incomplete_reason}",file=sys.stderr)
+        return 1
     print(f"Agentic audit: {result.route_status}; reviewer={result.reviewer_decision}; findings={len(result.findings)}; retries={result.retry_count}; client={result.client_type}")
-    return 0 if result.route_status=="APPROVED" else 1
+    return 0
 if __name__=="__main__": raise SystemExit(main())

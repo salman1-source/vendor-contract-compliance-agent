@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from types import SimpleNamespace
 import pytest
 from pydantic import ValidationError
@@ -50,11 +52,14 @@ def test_role_tool_allowlist_fails_closed(root,contract_path,tmp_path):
     assert r.route_status=="CONTROLLED_FAILURE" and not r.findings
 
 class FakeResponses:
-    def __init__(self, *, parsed=None, status="completed", call_name=None): self.parsed,self.status,self.call_name=parsed,status,call_name; self.kwargs=[]
-    def parse(self, **kwargs): self.kwargs.append(kwargs); return SimpleNamespace(status=self.status,output_parsed=self.parsed)
+    def __init__(self, *, parsed=None, status="completed", call_name=None, output=None, reason=None, error=None): self.parsed,self.status,self.call_name,self.output,self.reason,self.error=parsed,status,call_name,output,reason,error; self.kwargs=[]
+    def parse(self, **kwargs):
+        self.kwargs.append(kwargs)
+        if self.error: raise self.error
+        return SimpleNamespace(status=self.status,output_parsed=self.parsed,output=self.output or [],incomplete_details=SimpleNamespace(reason=self.reason))
     def create(self, **kwargs):
         self.kwargs.append(kwargs); output=[] if self.call_name is None else [SimpleNamespace(type="function_call",name=self.call_name)]
-        return SimpleNamespace(status=self.status,output=output)
+        return SimpleNamespace(status=self.status,output=output,incomplete_details=SimpleNamespace(reason=self.reason))
 
 def openai_with(fake):
     client=object.__new__(OpenAIModelClient); client.model_name="fake-model"; client._client=SimpleNamespace(responses=fake); return client
@@ -89,3 +94,56 @@ def test_fake_openai_rejects_expected_next_outside_allowlist_without_request():
 @pytest.mark.parametrize("status,parsed",[("incomplete",None),("completed",None)])
 def test_fake_openai_incomplete_or_refusal(status,parsed):
     with pytest.raises(ModelClientError,match="refusal or incomplete"): openai_with(FakeResponses(status=status,parsed=parsed)).structured("independent_reviewer",ReviewerResult,{})
+
+def test_fake_openai_incomplete_max_tokens_has_allowlisted_diagnostics():
+    fake=FakeResponses(status="incomplete", reason="max_output_tokens")
+    with pytest.raises(ModelClientError) as caught:
+        openai_with(fake).structured("orchestrator",ExecutionPlan,{})
+    assert (caught.value.safe_code, caught.value.stage, caught.value.response_status,
+            caught.value.incomplete_reason) == ("OPENAI_INCOMPLETE", "orchestrator", "incomplete", "max_output_tokens")
+    assert fake.kwargs[0]["max_output_tokens"] == 2048
+    assert fake.kwargs[0]["reasoning"] == {"effort":"low"}
+
+def test_fake_openai_refusal_does_not_expose_refusal_text():
+    secret="private refusal explanation"
+    refusal=SimpleNamespace(type="message",content=[SimpleNamespace(type="refusal",refusal=secret)])
+    with pytest.raises(ModelClientError) as caught:
+        openai_with(FakeResponses(output=[refusal])).structured("independent_reviewer",ReviewerResult,{})
+    assert caught.value.safe_code == "OPENAI_REFUSAL"
+    assert secret not in str(caught.value) and secret not in vars(caught.value).values()
+
+def test_fake_openai_sdk_error_only_keeps_class_and_status():
+    class FakeAPIError(Exception):
+        status_code=429
+    error=FakeAPIError("secret body", {"secret":"headers"})
+    with pytest.raises(ModelClientError) as caught:
+        openai_with(FakeResponses(error=error)).structured("orchestrator",ExecutionPlan,{})
+    assert caught.value.safe_code == "OPENAI_API_ERROR"
+    assert str(caught.value) == "OpenAI SDK error: FakeAPIError (HTTP 429)"
+    assert "secret" not in str(caught.value)
+
+def test_incomplete_creates_sanitized_failure_artifact(root,contract_path,tmp_path):
+    client=openai_with(FakeResponses(status="incomplete",reason="max_output_tokens"))
+    result=run_agentic(client,contract_path,root/"policies/demo_policies.yaml",tmp_path)
+    artifact=json.loads((tmp_path/"agentic_run.json").read_text())
+    assert result.route_status == "CONTROLLED_FAILURE"
+    assert {key:artifact[key] for key in ("error_code","error_stage","response_status","incomplete_reason")} == {
+        "error_code":"OPENAI_INCOMPLETE","error_stage":"orchestrator","response_status":"incomplete","incomplete_reason":"max_output_tokens"}
+    assert "Context:" not in artifact["error"]
+
+def test_cli_prints_only_safe_failure_line(monkeypatch,root,contract_path,tmp_path,capsys):
+    from vendor_contract_compliance import agentic_cli
+    monkeypatch.chdir(tmp_path)
+    code=agentic_cli.main(["--contract",str(contract_path),"--policies",str(root/"policies/demo_policies.yaml"),
+                           "--output-dir","evidence","--scenario","exhaustion"])
+    captured=capsys.readouterr()
+    assert code == 1 and captured.out == ""
+    assert captured.err == "Agentic audit failed safely: code=None stage=None status=None reason=None\n"
+    assert (tmp_path/"evidence/agentic_run.json").is_file()
+
+def test_workflow_always_uploads_attempt_named_failure_evidence(root):
+    workflow=(root/".github/workflows/phase3-live-model.yml").read_text()
+    upload=workflow.split("- uses: actions/upload-artifact@v4",1)[1]
+    assert "if: always()" in upload
+    assert "github.run_attempt" in upload
+    assert "continue-on-error: true" in workflow and "Enforce approved result" in workflow

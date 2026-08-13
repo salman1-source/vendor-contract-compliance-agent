@@ -2,6 +2,15 @@
 from datetime import datetime, timezone
 from .agentic_models import AgentEvent, ExecutionPlan, PlanStep, ReviewerDecision, ReviewerResult, ToolRequest
 from .agentic_tools import clauses, pdf_pages, policies, rules
+from .model_clients import ModelClientError
+
+def _failure(state, exc, fallback, stage):
+    if isinstance(exc, ModelClientError):
+        state.update(error=str(exc), error_code=exc.safe_code, error_stage=exc.stage,
+                     response_status=exc.response_status, incomplete_reason=exc.incomplete_reason)
+    else:
+        state.update(error=fallback, error_code="OPENAI_PLAN_ERROR", error_stage=stage)
+    state["route_status"]="FAIL"
 
 def _event(state, agent, action):
     state.setdefault("agent_events", []).append(AgentEvent(agent=agent, action=action, occurred_at=datetime.now(timezone.utc)))
@@ -16,7 +25,7 @@ class OrchestratorAgent:
         except Exception as exc:
             # A canonical non-executed placeholder keeps controlled-failure reporting typed.
             state["plan"]=ExecutionPlan(steps=[PlanStep(step=name.replace("_"," "),tool=name) for name in ("extract_pdf_pages","extract_contract_clauses","load_demo_policies","run_deterministic_rules")])
-            state["error"]=f"Orchestrator plan failed schema validation ({type(exc).__name__})"; state["route_status"]="FAIL"
+            _failure(state,exc,"Orchestrator plan failed schema validation","orchestrator")
         return state
 
 class ContractAnalystAgent:
@@ -32,7 +41,7 @@ class ContractAnalystAgent:
                 request=self.client.structured("contract_analyst",ToolRequest,{"allowed_tools":list(handlers),"expected_next":expected})
                 if request.tool_name != expected: raise ValueError("contract analyst requested a disallowed or out-of-order tool")
                 handlers[request.tool_name]()
-        except Exception as exc: state["error"]=f"Contract analysis failed safely ({type(exc).__name__})"; state["route_status"]="FAIL"
+        except Exception as exc: _failure(state,exc,"Contract analysis failed safely","contract_analyst")
         return state
 
 class ComplianceAnalystAgent:
@@ -48,7 +57,7 @@ class ComplianceAnalystAgent:
                 request=self.client.structured("compliance_analyst",ToolRequest,{"allowed_tools":list(handlers),"expected_next":expected})
                 if request.tool_name != expected: raise ValueError("compliance analyst requested a disallowed or out-of-order tool")
                 handlers[request.tool_name]()
-        except Exception as exc: state["error"]=f"Compliance analysis failed safely ({type(exc).__name__})"; state["route_status"]="FAIL"
+        except Exception as exc: _failure(state,exc,"Compliance analysis failed safely","compliance_analyst")
         return state
 
 class IndependentReviewerAgent:
@@ -62,7 +71,7 @@ class IndependentReviewerAgent:
         context={"findings":safe_findings,"tool_events":[{"tool_name":e.tool_name,"success":e.success} for e in state.get("tool_events",[])],"available_pages":[p.page_number for p in state.get("pages",[])],"missing_findings":[{"policy_id":f["policy_id"],"page_number":f["page_number"],"has_clause":f["contract_clause"] is not None} for f in snapshot if str(f["status"])=="MISSING"],"graph_path":list(state.get("graph_path",[])),"retry_count":state["retry_count"],"max_retries":state["max_retries"]}
         try: result=self.client.structured("independent_reviewer",ReviewerResult,context)
         except Exception as exc:
-            state["error"]=f"Reviewer output failed schema validation ({type(exc).__name__})"; state["reviewer_decision"]=ReviewerDecision.FAIL; state["reviewer_feedback"]="Invalid structured reviewer output."; return state
+            _failure(state,exc,"Reviewer output failed safely","independent_reviewer"); state["reviewer_decision"]=ReviewerDecision.FAIL; state["reviewer_feedback"]="Invalid structured reviewer output."; return state
         if [f.model_dump() for f in state["findings"]] != snapshot: raise RuntimeError("Reviewer cannot modify deterministic findings")
         if result.decision == ReviewerDecision.APPROVE and (len(snapshot)!=5 or any(f["page_number"] is not None for f in snapshot if str(f["status"])=="MISSING")):
             state["error"]="Reviewer approval rejected: incomplete evidence"; state["reviewer_decision"]=ReviewerDecision.FAIL
